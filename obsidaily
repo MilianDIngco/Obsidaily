@@ -69,7 +69,7 @@ done
 # Check if file already exists, if not, create it
 if [ -f "$NEWFILEPATH" ]; then
   echo "File already exists ($NEWFILEPATH)"
-  #exit 1
+  exit 1
 else
   touch "$NEWFILEPATH"
   echo "File created ($NEWFILEPATH)"
@@ -89,6 +89,6 @@ declare -a FILECONTENT=(
   "${TAIL[@]}"
 )
 
-printf '%s\n' "${FILECONTENT[@]}" > "$NEWFILEPATH"
+printf '%s\n' "${FILECONTENT[@]}" >> "$NEWFILEPATH"
 
 
