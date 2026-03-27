@@ -1,0 +1,94 @@
+#!/bin/bash
+
+# Obsidaily - a simple shell script to automate daily formatted obsidian notes
+
+# ---- Change these depending on format file name and location ------
+OBSIDIANVAULTPATH="$HOME/Documents/Obsidian Vault/"
+DAILYFORMATNAME="Daily Format.md"
+
+usage()
+{
+  echo -e "usage: obsidaily [[-d | --date \"manual date\"] | [-h | --help]]\nIf using -d, Enter full date in quotes only" 
+}
+
+# --------------------------- Features ----------------------------
+# 
+#   Each function here will return a string that will be appended 
+#   to the end of the file
+dailyweather()
+{
+  echo "Weather not implemented yet"
+}
+# -----------------------------------------------------------------
+
+DAILYFORMATPATH="$OBSIDIANVAULTPATH/$DAILYFORMATNAME"
+DATE=
+
+# Check for options
+while [ "$1" != "" ]; do  
+  case $1 in 
+    -d | --date )   shift
+                    DATE=$1
+                    ;;
+    -h | --help )   usage
+                    exit
+                    ;;
+    * )             usage
+                    exit 1
+  esac
+  shift
+done 
+
+# Grab date if not specified
+if [ DATE = "" ]; then 
+  DATE="$(date +%-m-%-d-%-y)"
+elif [ ! "$(date --date="$DATE")" ]; then
+  echo "Invalid date entered"
+  exit 1
+else 
+  DATE="$(date --date="$DATE" +%-m-%-d-%-y)"
+fi 
+
+NEWFILENAME="$DATE.md"
+NEWFILEPATH="$OBSIDIANVAULTPATH/$NEWFILENAME"
+
+# Split format into sections
+readarray -t FORMATCONTENT < "$DAILYFORMATPATH" 
+declare -a BODYCOMPONENTS=()
+
+# Grab file tag
+FILETAG="${FORMATCONTENT[0]:1:-1}"
+
+# Remove empty lines and store into headers
+for component in "${FORMATCONTENT[@]:1}"; do 
+  if [ ! -z "$component" ]; then
+    BODYCOMPONENTS+=("$component")
+  fi
+done
+
+# Check if file already exists, if not, create it
+if [ -f "$NEWFILEPATH" ]; then
+  echo "File already exists ($NEWFILEPATH)"
+  #exit 1
+else
+  touch "$NEWFILEPATH"
+  echo "File created ($NEWFILEPATH)"
+fi
+
+# Order and add all contents into the new file
+declare -a HEADER=(
+  [0]="$FILETAG"
+)
+declare -a TAIL=(
+  [0]="$(dailyweather)"
+)
+
+declare -a FILECONTENT=(
+  "${HEADER[@]}"
+  "${BODYCOMPONENTS[@]}"
+  "${TAIL[@]}"
+)
+
+printf '%s\n' "${FILECONTENT[@]}" > "$NEWFILEPATH"
+
+
