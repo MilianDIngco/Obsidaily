@@ -1,0 +1,11 @@
+#!/bin/bash
+# Obsidian vault variables. REQUIRED
+OBSIDIANVAULTPATH="$HOME/Documents/Obsidian Vault/"
+DAILYFORMATNAME="Daily Format.md"
+
+# OpenWeather API information. OPTIONAL
+OPENWEATHER_API_KEY="your_key_here"
+OBSIDAILYLATITUDE="your_latitude_here"
+OBSIDAILYLONGITUDE="your_longitude_here"
+OBSIDAILYWEATHERUNITS="imperial"
+OBSIDAILYWEATHERCOUNT="2"

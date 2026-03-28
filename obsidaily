@@ -2,29 +2,23 @@
 
 # Obsidaily - a simple shell script to automate daily formatted obsidian notes
 
-# ---- Change these depending on format file name and location ------
-OBSIDIANVAULTPATH="$HOME/Documents/Obsidian Vault/"
-DAILYFORMATNAME="Daily Format.md"
+# ---- Grab Obsidaily environment variables ----
+OBSIDAILYENV="$HOME/.obsidaily"
+if [[ ! -f "${OBSIDAILYENV}" ]]; then 
+  echo >&2 ".obsidaily file does not exist. Create one based off of the .obsidaily.example file provided, without the .example at the end"
+  exit 1
+fi
 
-usage()
-{
-  echo -e "usage: obsidaily [[-d | --date \"manual date\"] | [-h | --help]]\nIf using -d, Enter full date in quotes only" 
-}
+source "${OBSIDAILYENV}"
 
-# --------------------------- Features ----------------------------
-# 
-#   Each function here will return a string that will be appended 
-#   to the end of the file
-dailyweather()
-{
-  echo "Weather not implemented yet"
-}
-# -----------------------------------------------------------------
+# Check required environment variables were set 
+if [[ -z "${OBSIDIANVAULTPATH}" || -z "${DAILYFORMATNAME}" ]]; then
+  echo >&2 "Malformed .obsidaily file. Ensure the path to your obsidian vault and daily format name are set"
+  exit 1
+fi
 
-DAILYFORMATPATH="$OBSIDIANVAULTPATH/$DAILYFORMATNAME"
+# Check for options and get date
 DATE=
-
-# Check for options
 while [ "$1" != "" ]; do  
   case $1 in 
     -d | --date )   shift
@@ -40,15 +34,124 @@ while [ "$1" != "" ]; do
 done 
 
 # Grab date if not specified
-if [ DATE = "" ]; then 
+if [[ DATE = "" ]]; then 
   DATE="$(date +%-m-%-d-%-y)"
-elif [ ! "$(date --date="$DATE")" ]; then
-  echo "Invalid date entered"
+elif [[ ! "$(date --date="$DATE")" ]]; then
+  echo >&2 "Invalid date entered"
   exit 1
 else 
   DATE="$(date --date="$DATE" +%-m-%-d-%-y)"
 fi 
 
+usage()
+{
+  echo -e "usage: obsidaily [[-d | --date \"manual date\"] | [-h | --help]]\nIf using -d, Enter full date in quotes only" 
+}
+
+# --------------------------- Features ----------------------------
+# 
+#   Each function here will return a string that will be appended 
+#   to the end of the file
+dailyweather()
+{
+  # Check if the API keys were properly loaded
+  if [[ -z "${OPENWEATHER_API_KEY}" || -z "${OBSIDAILYLATITUDE}" || -z "${OBSIDAILYLONGITUDE}" ]]; then
+    echo "[ERROR]> Obsidaily environment variable file has not been set"
+    echo "Create a .obsidaily file in "$HOME" following the provided .obsidaily.example file and"
+    echo "insert your openweathermap api key got at https://openweathermap.org"
+    return
+  fi
+
+  # Check if python3 is available
+  if ! command -v python3 > /dev/null 2>&1; then
+    echo "[ERROR]> python3 is required for weather module but not available"
+    return
+  fi
+
+  # Call open weather api and write to temp file and check if failed
+  TMPJSON="/tmp/obsidailyweather.json"
+  if ! CURLRESULT=$(curl -s -o "${TMPJSON}" -w "%{http_code}" \
+    "https://api.openweathermap.org/data/2.5/forecast?lat=${OBSIDAILYLATITUDE}&lon=${OBSIDAILYLONGITUDE}&appid=${OPENWEATHER_API_KEY}&units=${OBSIDAILYWEATHERUNITS}&cnt=${OBSIDAILYWEATHERCOUNT}") ; then
+    echo "[ERROR]> Curl failed to connect to openweathermap.org"
+    return
+  fi
+
+  if [[ ${CURLRESULT} != "200" ]]; then 
+    echo "[ERROR]> Openweathermap returned with a failed status of ${CURLRESULT}"
+    return
+  fi 
+
+  # Parse open weather JSON for today's hourly weather
+WEATHER=$(python3 << EOF 
+# In the future, allow generating weather tables even if the day already started. 
+import json, sys, datetime, calendar
+with open("${TMPJSON}") as f:
+  data = json.load(f)
+  
+  # Check if this note's date is within 5 days from present. if not, return weather unavailable
+  timezoneoffset = int(data['city']['timezone'])
+  firsttime = datetime.datetime.fromtimestamp(int(data['list'][0]['dt']) + timezoneoffset)
+  lasttime = datetime.datetime.fromtimestamp(int(data['list'][-1]['dt']) + timezoneoffset)
+  filetime = datetime.datetime.strptime("${DATE}", "%m-%d-%y")
+
+  if ((filetime - firsttime) > datetime.timedelta(days=5)):
+    print("Weather data unavailable from more than 5 days from present")
+    sys.exit()
+
+  if ((filetime - firsttime) < datetime.timedelta(days=0)):
+    print("Weather data unavailable for previous days")
+    sys.exit()
+
+  # Check how many valid days there are to show
+  validdays = ((firsttime + datetime.timedelta(days=5)) - filetime).days
+
+  # Store outputs into day list
+  daytemps = [[] for _ in range(validdays)]
+  times = []
+
+  for entry in data['list']:
+    # Check if timestamp's DOM is earlier than file's DOM, if so skip
+    timestamp = datetime.datetime.fromtimestamp(int(entry['dt'] + timezoneoffset))
+    if timestamp < filetime:
+      continue
+    
+    # get index relative to filetime
+    index = (timestamp - datetime.timedelta(hours=timestamp.hour) - filetime).days
+    if (index >= validdays):
+      break
+
+    daytemps[index].append(entry['main']['temp'])
+
+    times.append(timestamp.time())
+
+  # Get rid of duplicate times (i know i could just hardcode it but what if they change the times they output?)
+  times = sorted(list(set(times)))
+    
+  # Set table header
+  tableheader = "| Times |"
+  hr = "| ----: |"
+  for dow in range(validdays):
+    downame = (filetime + datetime.timedelta(days=dow)).strftime('%a')
+    tableheader += f" {downame}  |"
+    hr += " :--: |"
+
+  print(tableheader)
+  print(hr)
+  for index in range(len(daytemps[0])):
+    temps = f"| {times[index].strftime("%H:%M")} | "
+    for day in daytemps:
+      temps += f"{float(day[index]):.1f} | "
+    print(temps)
+  
+
+EOF
+)
+  echo "${WEATHER}"
+}
+# -----------------------------------------------------------------
+
+# Set output file
+DAILYFORMATPATH="${OBSIDIANVAULTPATH}/${DAILYFORMATNAME}"
 NEWFILENAME="$DATE.md"
 NEWFILEPATH="$OBSIDIANVAULTPATH/$NEWFILENAME"
 
@@ -61,14 +164,14 @@ FILETAG="${FORMATCONTENT[0]:1:-1}"
 
 # Remove empty lines and store into headers
 for component in "${FORMATCONTENT[@]:1}"; do 
-  if [ ! -z "$component" ]; then
+  if [[ ! -z "$component" ]]; then
     BODYCOMPONENTS+=("$component")
   fi
 done
 
 # Check if file already exists, if not, create it
-if [ -f "$NEWFILEPATH" ]; then
-  echo "File already exists ($NEWFILEPATH)"
+if [[ -f "$NEWFILEPATH" ]]; then
+  echo >&2 "File already exists ($NEWFILEPATH)"
   exit 1
 else
   touch "$NEWFILEPATH"
