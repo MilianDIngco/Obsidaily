@@ -141,9 +141,9 @@ with open("${TMPJSON}") as f:
   print(tableheader)
   print(hr)
   for index in range(len(daytemps[0])):
-    temps = f"| {times[index].strftime("%H:%M")} | "
+    temps = f"| {times[index].strftime("%H:%M")} |"
     for day in daytemps:
-      temps += f"{float(day[index]):.1f} | "
+      temps += f"{float(day[index]):.1f} |"
     print(temps)
   
 
@@ -156,7 +156,7 @@ EOF
 linkyesterday() 
 {
   YESTERDAY=$(date --date "${TRUEDATE} - 1 day" +%-m-%-d-%-y)
-  echo "${TRUEDATE}[[${YESTERDAY}]]"
+  echo "[[${YESTERDAY}]]"
 }
 # -----------------------------------------------------------------
  
