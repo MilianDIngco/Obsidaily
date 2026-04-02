@@ -19,6 +19,7 @@ fi
 
 # Check for options and get date
 DATE=
+TRUEDATE=
 while [ "$1" != "" ]; do  
   case $1 in 
     -d | --date )   shift
@@ -36,10 +37,12 @@ done
 # Grab date if not specified
 if [[ DATE = "" ]]; then 
   DATE="$(date +%-m-%-d-%-y)"
+  TRUEDATE=$(date)
 elif [[ ! "$(date --date="$DATE")" ]]; then
   echo >&2 "Invalid date entered"
   exit 1
 else 
+  TRUEDATE=$(date --date="$DATE")
   DATE="$(date --date="$DATE" +%-m-%-d-%-y)"
 fi 
 
@@ -146,10 +149,17 @@ with open("${TMPJSON}") as f:
 
 EOF
 )
+
   echo "${WEATHER}"
 }
-# -----------------------------------------------------------------
 
+linkyesterday() 
+{
+  YESTERDAY=$(date --date "${TRUEDATE} - 1 day" +%-m-%-d-%-y)
+  echo "${TRUEDATE}[[${YESTERDAY}]]"
+}
+# -----------------------------------------------------------------
+ 
 # Set output file
 DAILYFORMATPATH="${OBSIDIANVAULTPATH}/${DAILYFORMATNAME}"
 NEWFILENAME="$DATE.md"
@@ -184,6 +194,7 @@ declare -a HEADER=(
 )
 declare -a TAIL=(
   [0]="$(dailyweather)"
+  [1]="$(linkyesterday)"
 )
 
 declare -a FILECONTENT=(
