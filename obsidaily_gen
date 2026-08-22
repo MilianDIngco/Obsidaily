@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# Simple script to generate obsidaily files and then sync them using obsidian headless. 
+
+OBSIDAILYENV="$HOME/.config/obsidaily"
+OBSIDAILY_PATH="$HOME/Obsidaily"
+
+# Add node to path so ob works
+export PATH="/home/mdi/.nvm/versions/node/v22.22.3/bin:$PATH"
+
+# yoinked this to get the vault's environment variable
+if [[ ! -f "${OBSIDAILYENV}" ]]; then 
+  echo >&2 ".obsidaily file does not exist. Create one based off of the .obsidaily.example file provided, without the .example at the end"
+  exit 1
+fi
+
+source "${OBSIDAILYENV}"
+
+# Check required environment variables were set 
+if [[ -z "${OBSIDIANVAULTPATH}" || -z "${DAILYFORMATNAME}" ]]; then
+  echo >&2 "Malformed .obsidaily file. Ensure the path to your obsidian vault and daily format name are set"
+  exit 1
+fi
+
+# Run obsidaily
+TOMORROW=$(date --date "$(date +%D) + 1 day")
+${OBSIDAILY_PATH}/obsidaily -d "${TOMORROW}"
+${OBSIDAILY_PATH}/ob_sync.sh

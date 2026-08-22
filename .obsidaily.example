@@ -2,6 +2,7 @@
 # Obsidian vault variables. REQUIRED
 OBSIDIANVAULTPATH="$HOME/Documents/Obsidian Vault/"
 DAILYFORMATNAME="Daily Format.md"
+DAILYDIRECTORYNAME="Dailies"
 
 # OpenWeather API information. OPTIONAL
 OPENWEATHER_API_KEY="your_key_here"

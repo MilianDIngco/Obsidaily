@@ -3,7 +3,7 @@
 # Obsidaily - a simple shell script to automate daily formatted obsidian notes
 
 # ---- Grab Obsidaily environment variables ----
-OBSIDAILYENV="$HOME/.obsidaily"
+OBSIDAILYENV="$HOME/.config/obsidaily"
 if [[ ! -f "${OBSIDAILYENV}" ]]; then 
   echo >&2 ".obsidaily file does not exist. Create one based off of the .obsidaily.example file provided, without the .example at the end"
   exit 1
@@ -12,7 +12,7 @@ fi
 source "${OBSIDAILYENV}"
 
 # Check required environment variables were set 
-if [[ -z "${OBSIDIANVAULTPATH}" || -z "${DAILYFORMATNAME}" ]]; then
+if [[ -z "${OBSIDIANVAULTPATH}" || -z "${DAILYFORMATNAME}" || -z "${DAILYDIRECTORYNAME}" ]]; then
   echo >&2 "Malformed .obsidaily file. Ensure the path to your obsidian vault and daily format name are set"
   exit 1
 fi
@@ -132,7 +132,7 @@ with open("${TMPJSON}") as f:
     
   # Set table header
   tableheader = "| Times |"
-  hr = "| ----: |"
+  hr = "| :---: |"
   for dow in range(validdays):
     downame = (filetime + datetime.timedelta(days=dow)).strftime('%a')
     tableheader += f" {downame}  |"
@@ -158,12 +158,17 @@ linkyesterday()
   YESTERDAY=$(date --date "${TRUEDATE} - 1 day" +%-m-%-d-%-y)
   echo "[[${YESTERDAY}]]"
 }
+
+#grabresponsibilities()
+#{
+
+#}
 # -----------------------------------------------------------------
  
 # Set output file
-DAILYFORMATPATH="${OBSIDIANVAULTPATH}/${DAILYFORMATNAME}"
+DAILYFORMATPATH="${OBSIDIANVAULTPATH}/${DAILYDIRECTORYNAME}/${DAILYFORMATNAME}"
 NEWFILENAME="$DATE.md"
-NEWFILEPATH="$OBSIDIANVAULTPATH/$NEWFILENAME"
+NEWFILEPATH="$OBSIDIANVAULTPATH/${DAILYDIRECTORYNAME}/$NEWFILENAME"
 
 # Split format into sections
 readarray -t FORMATCONTENT < "$DAILYFORMATPATH" 
